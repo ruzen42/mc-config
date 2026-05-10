@@ -1,0 +1,6 @@
+mc-config
+mc-config.exe
+src/*.hi
+src/*.o
+
+dist-newstyle
