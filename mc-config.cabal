@@ -32,5 +32,6 @@ executable mc-config
                     , wreq
                     , lens
                     , directory
+                    , optparse-applicative
     hs-source-dirs:   app
     default-language: GHC2024

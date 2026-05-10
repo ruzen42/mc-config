@@ -1,55 +1,69 @@
-
 module Main (main) where
 
-import System.Environment   (getArgs)
-import Config               (stdCfg, execConfig)
-import Install              (getAvailableVersions, downloadLatestPurpur)
-import System.Directory     (doesFileExist)
-import System.IO            (hSetBuffering, stdout, BufferMode(NoBuffering))
-import Data.Char            (toLower)
-import Control.Monad        (unless)
-import System.Exit          (exitSuccess, exitFailure)
-import Data.Aeson           (decode)
-import Data.Aeson.Encode.Pretty (encodePretty)
-import qualified Data.ByteString.Lazy as BL
+import           Config                     (execConfig, stdCfg)
+import           Control.Monad              (unless)
+import           Data.Aeson                 (decode)
+import           Data.Aeson.Encode.Pretty   (encodePretty)
+import           Data.Char                  (toLower)
+import qualified Data.ByteString.Lazy       as BL
+import           Install                    (interactiveDownload)
+import           Options.Applicative
+import           System.Directory           (doesFileExist)
+import           System.Exit                (exitFailure, exitSuccess)
+import           System.IO                  (BufferMode (NoBuffering),
+                                             hSetBuffering, stdout)
+
+data Command
+    = Download
+    | Run FilePath
+    deriving Show
+
+downloadCmd :: Parser Command
+downloadCmd = flag' Download
+    (  long  "download"
+    <> short 'd'
+    <> help  "Select and download Purpur"
+    )
+
+runCmd :: Parser Command
+runCmd = Run <$> strArgument
+    (  metavar "CONFIG"
+    <> value   "./mine.cfg"
+    <> showDefault
+    <> help    "Path to the configuration file"
+    )
+
+opts :: ParserInfo Command
+opts = info (downloadCmd <|> runCmd <**> helper)
+    (  fullDesc
+    <> progDesc "Configurator Minecraft-server"
+    <> header   "mc-config - utility for setup Minecraft-server"
+    )
 
 main :: IO ()
 main = do
     hSetBuffering stdout NoBuffering
-    args <- getArgs
+    cmd <- execParser opts
+    case cmd of
+        Download       -> interactiveDownload
+        Run configPath -> runWithConfig configPath
 
-    case args of
-        ["--versions"] -> do
-            vs <- getAvailableVersions
-            mapM_ putStrLn vs
+runWithConfig :: FilePath -> IO ()
+runWithConfig configPath = do
+    exists <- doesFileExist configPath
 
-        ["--download"] -> do
-            downloadLatestPurpur
+    unless exists $ do
+        putStr $ "File " ++ configPath ++ " not found. Create new? [Y/n]: "
+        answer <- getLine
+        if map toLower answer /= "n"
+            then do
+                BL.writeFile configPath (encodePretty stdCfg)
+                putStrLn $ "Created new config: " ++ configPath
+            else exitSuccess
 
-        _ -> do
-            let configPath = if null args then "./mc.cfg" else head args
+    putStrLn $ "Processed with config: " ++ configPath
+    file <- BL.readFile configPath
 
-            exists <- doesFileExist configPath
-
-            unless exists $ do
-                putStr $ "File " ++ configPath ++ " does not exist. Create new? [Y/n]: "
-                answer <- getLine
-                let response = map toLower answer
-
-                if response /= "n" then do
-                    BL.writeFile configPath (encodePretty stdCfg)
-                    putStrLn $ "Created new config at: " ++ configPath
-                else
-                    exitSuccess
-
-            putStrLn $ "Using config: " ++ configPath
-
-            file <- BL.readFile configPath
-
-            case decode file of
-                Nothing  -> do
-                    putStrLn "Config parsing error"
-                    exitFailure
-                Just cfg -> do
-                    print cfg
-                    execConfig cfg
+    case decode file of
+        Nothing  -> putStrLn "Error parsing config" >> exitFailure
+        Just cfg -> print cfg >> execConfig cfg
