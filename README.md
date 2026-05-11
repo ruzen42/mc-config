@@ -17,7 +17,7 @@ mc-config [-d|--download] [CONFIG]
 
 | Flag / Argument     | Description                                              |
 |---------------------|----------------------------------------------------------|
-| `-d`, `--download`  | Fetch available Purpur versions and download one         |
+| `-g`, `--get-purpur`  | Fetch available Purpur versions and download one         |
 | `CONFIG`            | Path to the config file (default: `./mine.cfg`)          |
 | `-h`, `--help`      | Show help                                                |
 
@@ -25,10 +25,10 @@ mc-config [-d|--download] [CONFIG]
 
 ```bash
 # Use the default config (./mine.cfg)
-mc-config
+mc-config --start
 
 # Use a custom config path
-mc-config /path/to/server.cfg
+mc-config --start /path/to/server.cfg
 ```
 
 If the config file does not exist, you will be prompted to create one with sensible defaults.
@@ -36,9 +36,9 @@ If the config file does not exist, you will be prompted to create one with sensi
 ### Download Purpur
 
 ```bash
-mc-config --download
+mc-config --get-purpur
 # or
-mc-config -d
+mc-config -g
 ```
 
 You will see a numbered list of all available versions:
@@ -64,6 +64,7 @@ The config file is a JSON document. A default one is created automatically if mi
 
 ```json
 {
+  "tmuxSession": "mc",
   "javaPath": "/usr/bin/java",
   "startRam": 2,
   "maxRam":   2,
