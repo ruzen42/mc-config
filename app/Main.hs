@@ -45,7 +45,7 @@ opts = info (downloadCmd <|> runCmd <**> helper)
 main :: IO ()
 main = do
     hSetBuffering stdout NoBuffering
-    putStrLn "2026 Ruzen42 MIT License (Minecraft configurator v0.1.1.0)"
+    putStrLn "2026 Ruzen42 MIT License (Minecraft configurator v0.1.2.1)"
     cmd <- execParser opts
     case cmd of
         Download       -> interactiveDownload
