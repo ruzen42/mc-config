@@ -2,54 +2,109 @@
 
 module Main (main) where
 
-import           Config                     (execConfig, stdCfg)
-import           Control.Monad              (unless)
-import           Data.Aeson                 (decode)
-import           Data.Aeson.Encode.Pretty   (encodePretty)
-import           Data.Char                  (toLower)
-import qualified Data.ByteString.Lazy       as BL
-import           Install                    (interactiveDownload)
+import           Config                   (Config (tmuxSession), stdCfg)
+import           Control.Monad            (unless)
+import           Data.Aeson               (decode)
+import           Data.Aeson.Encode.Pretty (encodePretty)
+import           Data.Char                (toLower)
+import qualified Data.ByteString.Lazy     as BL
+import           Install                  (downloadVersion, interactiveDownload)
 import           Options.Applicative
-import           System.Directory           (doesFileExist)
-import           System.Exit                (exitFailure, exitSuccess)
-import           System.IO                  (BufferMode (NoBuffering),
-                                             hSetBuffering, stdout)
+import           System.Directory         (doesFileExist)
+import           System.Exit              (exitFailure, exitSuccess)
+import           System.IO                (BufferMode (NoBuffering),
+                                           hSetBuffering, stdout)
+import           Tmux                     (runTmux, sendTmux, stopTmux)
 
 data Command
-    = Download
-    | Run FilePath
+    = Start     FilePath        -- --start [cfg-path]
+    | Stop      String          -- --stop  [session-name]
+    | GetPurpur (Maybe String)  -- --get-purpur [version]
+    | Send      String          -- --send <command>
     deriving Show
 
-downloadCmd :: Parser Command
-downloadCmd = flag' Download
-    (  long  "download"
-    <> short 'd'
-    <> help  "Select version and download Purpur"
+-- --start [CONFIG]   default: mine.cfg
+startCmd :: Parser Command
+startCmd = Start <$>
+    ( flag' ()
+        (  long "start"
+        <> help "Start the Minecraft server"
+        )
+    *> strArgument
+        (  metavar "CONFIG"
+        <> value   "mine.cfg"
+        <> showDefault
+        <> help    "Path to config file"
+        )
     )
 
-runCmd :: Parser Command
-runCmd = Run <$> strArgument
-    (  metavar "CONFIG"
-    <> value   "./mine.cfg"
-    <> showDefault
-    <> help    "Path to the configuration file"
+-- --stop [SESSION]   default: minecraft
+stopCmd :: Parser Command
+stopCmd = Stop <$>
+    ( flag' ()
+        (  long "stop"
+        <> help "Stop the Minecraft server (sends /stop via tmux)"
+        )
+    *> strArgument
+        (  metavar "SESSION"
+        <> value   "minecraft"
+        <> showDefault
+        <> help    "tmux session name"
+        )
     )
+
+-- --get-purpur [VERSION]   optional; if omitted → interactive selection
+getPurpurCmd :: Parser Command
+getPurpurCmd = GetPurpur <$>
+    ( flag' ()
+        (  long "get-purpur"
+        <> help "Download a Purpur build (omit version for interactive selection)"
+        )
+    *> optional (strArgument
+        (  metavar "VERSION"
+        <> help    "Purpur version to download, e.g. 26.1.2"
+        ))
+    )
+
+-- --send <COMMAND>   required
+sendCmd :: Parser Command
+sendCmd = Send <$>
+    ( flag' ()
+        (  long "send"
+        <> help "Send a command to the running server via tmux"
+        )
+    *> strArgument
+        (  metavar "COMMAND"
+        <> help    "Server command to send, e.g. \"say hello\""
+        )
+    )
+
+commands :: Parser Command
+commands = startCmd <|> stopCmd <|> getPurpurCmd <|> sendCmd
 
 opts :: ParserInfo Command
-opts = info (downloadCmd <|> runCmd <**> helper)
+opts = info (commands <**> helper)
     (  fullDesc
-    <> progDesc "Configurator Minecraft-server"
-    <> header   "mc-config - utility for setup Minecraft-server"
+    <> header   "mc-config - Minecraft server manager"
+    <> progDesc "Start/stop a Purpur server, download builds, send commands"
     )
 
 main :: IO ()
 main = do
     hSetBuffering stdout NoBuffering
-    putStrLn "2026 Ruzen42 MIT License (Minecraft configurator v0.1.2.1)"
+    putStrLn "2026 Ruzen42 MIT License (Minecraft configurator v0.2.0.0)"
     cmd <- execParser opts
     case cmd of
-        Download       -> interactiveDownload
-        Run configPath -> runWithConfig configPath
+        Start     cfgPath -> runWithConfig cfgPath
+        Stop      session -> stopTmux session
+        GetPurpur mver    -> case mver of
+            Nothing         -> interactiveDownload
+            Just ver        -> downloadVersion ver
+        Send      cmd1    -> sendTmux "minecraft" cmd1
+
+-- ---------------------------------------------------------------------------
+-- Helpers
+-- ---------------------------------------------------------------------------
 
 runWithConfig :: FilePath -> IO ()
 runWithConfig configPath = do
@@ -61,7 +116,7 @@ runWithConfig configPath = do
         if map toLower answer /= "n"
             then do
                 BL.writeFile configPath (encodePretty stdCfg)
-                BL.writeFile "eula.txt" "eula=true"
+                BL.writeFile "eula.txt"   "eula=true"
                 putStrLn $ "Created new config: " ++ configPath
             else exitSuccess
 
@@ -70,4 +125,4 @@ runWithConfig configPath = do
 
     case decode file of
         Nothing  -> putStrLn "Error parsing config" >> exitFailure
-        Just cfg -> print cfg >> execConfig cfg
+        Just cfg -> print cfg >> runTmux (tmuxSession cfg) (show cfg)

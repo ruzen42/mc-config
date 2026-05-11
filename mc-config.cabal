@@ -1,6 +1,6 @@
 cabal-version:      3.14
 name:               mc-config
-version:            0.1.2.1
+version:            0.2.0.0
 -- synopsis:
 -- description:
 license:            MIT
@@ -22,6 +22,8 @@ executable mc-config
     other-modules:
       Config
       Install
+      Tmux
+      Logger
     -- other-extensions:
     build-depends:    base
                     , directory
@@ -33,5 +35,6 @@ executable mc-config
                     , lens
                     , directory
                     , optparse-applicative
+                    , rainbow
     hs-source-dirs:   app
     default-language: GHC2024

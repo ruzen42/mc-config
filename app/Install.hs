@@ -2,7 +2,7 @@
 {-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Install (getAvailableVersions, interactiveDownload) where
+module Install (getAvailableVersions, interactiveDownload, downloadVersion) where
 
 import           Control.Lens              ((^.))
 import           Data.Aeson                (FromJSON, decode)

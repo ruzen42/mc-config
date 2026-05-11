@@ -1,19 +1,19 @@
 {-# LANGUAGE DeriveGeneric #-}
 
-module Config (Config(..), stdCfg, execConfig) where
+module Config (Config(..), stdCfg, decodeConfig, encodeConfig) where
 
 import GHC.Generics (Generic)
-import Data.Aeson (ToJSON, FromJSON)
-import System.Process
-import Control.Exception (try, IOException)
+import Data.Aeson (ToJSON, FromJSON, decode, encode)
+import Data.ByteString.Lazy (ByteString)
 
 data Config = Config
-    { options  :: [String]
-    , javaPath :: String
-    , maxRam   :: Int
-    , startRam :: Int
-    , jarPath  :: String
-    , guiMode  :: Bool
+    { options     :: [String]
+    , javaPath    :: String
+    , maxRam      :: Int
+    , startRam    :: Int
+    , jarPath     :: String
+    , guiMode     :: Bool
+    , tmuxSession :: String
     } deriving Generic
 
 instance Show Config where
@@ -37,18 +37,17 @@ instance FromJSON Config
 
 stdCfg :: Config
 stdCfg = Config
-    { options  = []
-    , javaPath = "/usr/bin/java"
-    , guiMode  = False
-    , maxRam   = 2
-    , startRam = 2
-    , jarPath  = "purpur.jar"
+    { options     = []
+    , javaPath    = "/usr/bin/java"
+    , guiMode     = False
+    , maxRam      = 2
+    , startRam    = 2
+    , jarPath     = "purpur.jar"
+    , tmuxSession = "minecraft"
     }
 
-execConfig :: Config -> IO ()
-execConfig cfg = do
-  let cmd = shell $ show cfg
-  raw <- try $ readCreateProcess cmd "" :: IO (Either IOException String)
-  case raw of
-    Right a -> putStrLn a
-    Left  e -> putStrLn $ "Java Error: " ++ show e
+decodeConfig :: ByteString -> Maybe Config
+decodeConfig = decode
+
+encodeConfig :: Config -> ByteString
+encodeConfig = encode
