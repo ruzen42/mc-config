@@ -1,13 +1,13 @@
 # mc-config
 
-A lightweight CLI tool written in Haskell for managing and launching a [Purpur](https://purpurmc.org/) Minecraft server. It handles server configuration via a JSON file and can download any Purpur build directly from the official API.
+A lightweight CLI tool written in Haskell for managing and launching a [Purpur](https://purpurmc.org/) Minecraft server. It handles server configuration via a JSON file and can download any Purpur build directly 
 
 ## Features
 
-- Launch a Minecraft server from a JSON config file
+- Launch a Minecraft server from a JSON config file (in future maybe replaced by a TOML/YAML/Dhall config)
 - Auto-create a default config if none exists
 - Interactively download any Purpur version from the official API
-- Clean CLI interface powered by `optparse-applicative`
+- CLI interface powered by `optparse-applicative`
 
 ## Usage
 
