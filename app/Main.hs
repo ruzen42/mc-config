@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Main (main) where
 
 import           Config                     (execConfig, stdCfg)
@@ -22,7 +24,7 @@ downloadCmd :: Parser Command
 downloadCmd = flag' Download
     (  long  "download"
     <> short 'd'
-    <> help  "Select and download Purpur"
+    <> help  "Select version and download Purpur"
     )
 
 runCmd :: Parser Command
@@ -43,6 +45,7 @@ opts = info (downloadCmd <|> runCmd <**> helper)
 main :: IO ()
 main = do
     hSetBuffering stdout NoBuffering
+    putStrLn "2026 Ruzen42 MIT License (Minecraft configurator v0.1.1.0)"
     cmd <- execParser opts
     case cmd of
         Download       -> interactiveDownload
@@ -58,6 +61,7 @@ runWithConfig configPath = do
         if map toLower answer /= "n"
             then do
                 BL.writeFile configPath (encodePretty stdCfg)
+                BL.writeFile "eula.txt" "eula=true"
                 putStrLn $ "Created new config: " ++ configPath
             else exitSuccess
 

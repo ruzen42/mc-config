@@ -11,6 +11,7 @@ import           GHC.Generics              (Generic)
 import           Network.Wreq              (get, responseBody)
 import           System.IO                 (hFlush, stdout)
 import           Text.Read                 (readMaybe)
+import           Control.Monad             (when, forM_)
 
 data PurpurVersions = PurpurVersions
     { versions :: [String]
@@ -45,7 +46,10 @@ interactiveDownload = do
         then putStrLn "No versions available."
         else do
             let numbered = zip [1..] vs
-            mapM_ (\(i, v) -> putStrLn $ show (i :: Int) ++ ") " ++ v) numbered
+            forM_ numbered $ (\(i, v) -> do
+                putStr $ show (i :: Int) ++ ") " ++ v ++ " "
+                when (i `mod` 3 == 0) $ putStrLn ""
+                )
             putStr $ "\nSelect a version [1-" ++ show (length vs) ++ "]: "
             hFlush stdout
             input <- getLine

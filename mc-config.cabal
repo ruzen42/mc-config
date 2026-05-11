@@ -1,6 +1,6 @@
 cabal-version:      3.14
 name:               mc-config
-version:            0.1.0.0
+version:            0.1.2.1
 -- synopsis:
 -- description:
 license:            MIT
