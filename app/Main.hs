@@ -15,6 +15,7 @@ import           System.Exit              (exitFailure, exitSuccess)
 import           System.IO                (BufferMode (NoBuffering),
                                            hSetBuffering, stdout)
 import           Tmux                     (runTmux, sendTmux, stopTmux)
+import           Logger                   (successLog, unnecessaryLog, errorLog)
 
 data Command
     = Start     FilePath        -- --start [cfg-path]
@@ -92,7 +93,7 @@ opts = info (commands <**> helper)
 main :: IO ()
 main = do
     hSetBuffering stdout NoBuffering
-    putStrLn "2026 Ruzen42 MIT License (Minecraft configurator v0.2.0.0)"
+    unnecessaryLog "2026 Ruzen42 MIT License (Minecraft configurator v0.2.0.0)"
     cmd <- execParser opts
     case cmd of
         Start     cfgPath -> runWithConfig cfgPath
@@ -117,12 +118,13 @@ runWithConfig configPath = do
             then do
                 BL.writeFile configPath (encodePretty stdCfg)
                 BL.writeFile "eula.txt"   "eula=true"
-                putStrLn $ "Created new config: " ++ configPath
+                successLog $ "Created new config: "
+                putStrLn configPath
             else exitSuccess
 
     putStrLn $ "Processed with config: " ++ configPath
     file <- BL.readFile configPath
 
     case decode file of
-        Nothing  -> putStrLn "Error parsing config" >> exitFailure
+        Nothing  -> errorLog "invalid config" >> exitFailure
         Just cfg -> print cfg >> runTmux (tmuxSession cfg) (show cfg)

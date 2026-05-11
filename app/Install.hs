@@ -12,6 +12,7 @@ import           Network.Wreq              (get, responseBody)
 import           System.IO                 (hFlush, stdout)
 import           Text.Read                 (readMaybe)
 import           Control.Monad             (when, forM_)
+import Logger (errorLog, successLog)
 
 data PurpurVersions = PurpurVersions
     { versions :: [String]
@@ -36,14 +37,15 @@ downloadVersion ver = do
     r <- get url
     let body = r ^. responseBody :: BL.ByteString
     BL.writeFile fileName body
-    putStrLn $ "Done: " ++ fileName
+    successLog "Done:"
+    putStrLn $ "\t " ++ fileName
 
 interactiveDownload :: IO ()
 interactiveDownload = do
     putStrLn "Getting available versions..."
     vs <- getAvailableVersions
     if null vs
-        then putStrLn "No versions available."
+        then errorLog "No versions available."
         else do
             let numbered = zip [1..] vs
             forM_ numbered $ (\(i, v) -> do
@@ -54,9 +56,9 @@ interactiveDownload = do
             hFlush stdout
             input <- getLine
             case readMaybe input :: Maybe Int of
-                Nothing -> putStrLn "Invalid input."
+                Nothing -> errorLog "Invalid input"
                 Just n
                     | n < 1 || n > length vs ->
-                        putStrLn $ "Number must be between 1 and " ++ show (length vs)
+                        errorLog $ "Number must be between min and max"
                     | otherwise ->
                         downloadVersion (vs !! (n - 1))
