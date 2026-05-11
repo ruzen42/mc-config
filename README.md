@@ -1,5 +1,13 @@
 # mc-config
 
+<img width="256" height="256" alt="file_00000000b26071fab32f25a19aacd79b" src="https://github.com/user-attachments/assets/be8b8656-897c-4f98-957c-9c0f26a510b6" />
+
+![GitHub License](https://img.shields.io/github/license/ruzen42/mc-config?style=for-the-badge&color=red)
+![GitHub Release](https://img.shields.io/github/v/release/ruzen42/mc-config?style=for-the-badge&color=red)
+
+![GitHub watchers](https://img.shields.io/github/watchers/ruzen42/mc-config?style=for-the-badge&color=green)
+![GitHub contributors](https://img.shields.io/github/contributors/ruzen42/mc-config?style=for-the-badge&color=red)
+
 A lightweight CLI tool written in Haskell for managing and launching a [Purpur](https://purpurmc.org/) Minecraft server. It handles server configuration via a JSON file and can download any Purpur build directly 
 
 ## Features
@@ -12,6 +20,7 @@ A lightweight CLI tool written in Haskell for managing and launching a [Purpur](
 ## Usage
 
 ```
+
 mc-config [-d|--download] [CONFIG]
 ```
 
