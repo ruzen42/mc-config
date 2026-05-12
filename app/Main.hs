@@ -21,7 +21,7 @@ data Command
     = Start     FilePath        -- --start [cfg-path]
     | Stop      String          -- --stop  [session-name]
     | GetPurpur (Maybe String)  -- --get-purpur [version]
-    | Send      String String          -- --send <command>
+    | Send      String String   -- --send <session> <command>
     deriving Show
 
 -- --start [CONFIG]   default: mine.cfg
@@ -67,22 +67,26 @@ getPurpurCmd = GetPurpur <$>
         ))
     )
 
--- --send <COMMAND>   required
+-- --send <SESSION> <COMMAND>   required
+
 sendCmd :: Parser Command
-sendCmd = Send <$>
-    ( flag' ()
-        (  long "send"
-        <> help "Send a command to the running server via tmux"
+sendCmd =
+    flag' ()
+        (  long  "send"
+        <> short 'S'
+        <> help  "Send a command to the running server via tmux"
         )
-    *> strArgument
-        (  metavar "SESSION"
-        <> help    "Tmux session to send the command to"
-        )
-    *> strArgument
-        (  metavar "COMMAND"
-        <> help    "Server command to send, e.g. \"say hello\""
-        )
-    )
+    *> (Send
+        <$> strArgument
+                (  metavar "SESSION"
+                <> value   "minecraft"
+                <> showDefault
+                <> help    "tmux session to send the command to"
+                )
+        <*> strArgument
+                (  metavar "COMMAND"
+                <> help    "Server command, e.g. \"say hello\""
+                ))
 
 commands :: Parser Command
 commands = startCmd <|> stopCmd <|> getPurpurCmd <|> sendCmd
