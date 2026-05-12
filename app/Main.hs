@@ -5,7 +5,6 @@ module Main (main) where
 import           Config                   (Config (tmuxSession), stdCfg, encodeConfig, decodeConfig)
 import           Control.Monad            (unless)
 import           Data.Char                (toLower)
-import qualified Data.ByteString.Lazy     as BL
 import           Install                  (downloadVersion, interactiveDownload)
 import           Options.Applicative
 import           System.Directory         (doesFileExist)
@@ -94,7 +93,7 @@ opts = info (commands <**> helper)
 main :: IO ()
 main = do
     hSetBuffering stdout NoBuffering
-    unnecessaryLog "2026 Ruzen42 MIT License (Minecraft configurator v0.2.0.0)"
+    unnecessaryLog "2026 Ruzen42 MIT License (Minecraft configurator v1.0.0.0)"
     cmd <- execParser opts
     case cmd of
         Start     cfgPath -> runWithConfig cfgPath
@@ -114,7 +113,7 @@ runWithConfig configPath = do
         if map toLower answer /= "n"
             then do
                 writeFile configPath (encodeConfig stdCfg)
-                BL.writeFile "eula.txt"   "eula=true"
+                TIO.writeFile "eula.txt" "eula=true"
                 successLog $ "Created new config: "
                 putStrLn configPath
             else exitSuccess

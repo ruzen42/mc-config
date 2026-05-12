@@ -1,5 +1,5 @@
 {
-  description = "mc-config — Minecraft Purpur server manager";
+  description = "mc-config - Minecraft Purpur server manager";
 
   inputs = {
     nixpkgs.url      = "github:NixOS/nixpkgs/nixpkgs-unstable";
@@ -15,7 +15,7 @@
 
         mc-config = haskell.mkDerivation {
           pname   = "mc-config";
-          version = "0.2.0.0";
+          version = "1.0.0.0";
           src     = ./.;
 
           isLibrary    = false;
