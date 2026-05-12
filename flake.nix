@@ -15,7 +15,7 @@
 
         mc-config = haskell.mkDerivation {
           pname   = "mc-config";
-          version = "0.3.0.0";
+          version = "0.2.0.0";
           src     = ./.;
 
           isLibrary    = false;
@@ -31,6 +31,7 @@
             directory
             process
             optparse-applicative
+            rainbow
           ];
 
           license     = pkgs.lib.licenses.mit;
