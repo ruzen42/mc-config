@@ -28,7 +28,6 @@ executable mc-config
     build-depends:    base
                     , directory
                     , aeson
-                    , aeson-pretty
                     , bytestring
                     , text
                     , process
