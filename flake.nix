@@ -24,7 +24,6 @@
           executableHaskellDepends = with haskell; [
             base
             aeson
-            aeson-pretty
             bytestring
             wreq
             lens
@@ -32,6 +31,8 @@
             process
             optparse-applicative
             rainbow
+            toml-parser
+            containers
           ];
 
           license     = pkgs.lib.licenses.mit;
