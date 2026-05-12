@@ -21,7 +21,7 @@ data Command
     = Start     FilePath        -- --start [cfg-path]
     | Stop      String          -- --stop  [session-name]
     | GetPurpur (Maybe String)  -- --get-purpur [version]
-    | Send      String          -- --send <command>
+    | Send      String String          -- --send <command>
     deriving Show
 
 -- --start [CONFIG]   default: mine.cfg
@@ -75,6 +75,10 @@ sendCmd = Send <$>
         <> help "Send a command to the running server via tmux"
         )
     *> strArgument
+        (  metavar "SESSION"
+        <> help    "Tmux session to send the command to"
+        )
+    *> strArgument
         (  metavar "COMMAND"
         <> help    "Server command to send, e.g. \"say hello\""
         )
@@ -101,7 +105,7 @@ main = do
         GetPurpur mver    -> case mver of
             Nothing         -> interactiveDownload
             Just ver        -> downloadVersion ver
-        Send      cmd1    -> sendTmux "minecraft" cmd1
+        Send session cmd1 -> sendTmux session cmd1
 
 runWithConfig :: FilePath -> IO ()
 runWithConfig configPath = do
