@@ -2,10 +2,8 @@
 
 module Main (main) where
 
-import           Config                   (Config (tmuxSession), stdCfg)
+import           Config                   (Config (tmuxSession), stdCfg, encodeConfig, decodeConfig)
 import           Control.Monad            (unless)
-import           Data.Aeson               (decode)
-import           Data.Aeson.Encode.Pretty (encodePretty)
 import           Data.Char                (toLower)
 import qualified Data.ByteString.Lazy     as BL
 import           Install                  (downloadVersion, interactiveDownload)
@@ -16,6 +14,9 @@ import           System.IO                (BufferMode (NoBuffering),
                                            hSetBuffering, stdout)
 import           Tmux                     (runTmux, sendTmux, stopTmux)
 import           Logger                   (successLog, unnecessaryLog, errorLog)
+import qualified Data.Text.IO             as TIO
+import           Data.Text (pack)
+import Rainbow (chunk)
 
 data Command
     = Start     FilePath        -- --start [cfg-path]
@@ -103,10 +104,6 @@ main = do
             Just ver        -> downloadVersion ver
         Send      cmd1    -> sendTmux "minecraft" cmd1
 
--- ---------------------------------------------------------------------------
--- Helpers
--- ---------------------------------------------------------------------------
-
 runWithConfig :: FilePath -> IO ()
 runWithConfig configPath = do
     exists <- doesFileExist configPath
@@ -116,15 +113,17 @@ runWithConfig configPath = do
         answer <- getLine
         if map toLower answer /= "n"
             then do
-                BL.writeFile configPath (encodePretty stdCfg)
+                writeFile configPath (encodeConfig stdCfg)
                 BL.writeFile "eula.txt"   "eula=true"
                 successLog $ "Created new config: "
                 putStrLn configPath
             else exitSuccess
 
     putStrLn $ "Processed with config: " ++ configPath
-    file <- BL.readFile configPath
+    file <- TIO.readFile configPath
 
-    case decode file of
-        Nothing  -> errorLog "invalid config" >> exitFailure
-        Just cfg -> print cfg >> runTmux (tmuxSession cfg) (show cfg)
+    case decodeConfig file of
+        Left err -> do
+            errorLog $ "invalid config" <> (chunk $ pack err)
+            exitFailure
+        Right cfg -> print cfg >> runTmux (tmuxSession cfg) (show cfg)
