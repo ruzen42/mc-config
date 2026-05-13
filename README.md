@@ -12,7 +12,7 @@ A lightweight CLI tool written in Haskell for managing and launching a [Purpur](
 
 ## Features
 
-- Launch a Minecraft server from a JSON config file (in future maybe replaced by a TOML/YAML/Dhall config)
+- Launch a Minecraft server from a TOML config file 
 - Auto-create a default config if none exists
 - Interactively download any Purpur version from the official API
 - CLI interface powered by `optparse-applicative`
@@ -109,7 +109,9 @@ wreq, lens, directory, process, optparse-applicative
 mc-config/
 ├── Main.hs      — Entry point, CLI argument parsing
 ├── Config.hs    — Config type, JSON serialization, server launch
-├── Install.hs   — Purpur API client, version download
+├── Install.hs   — Purpur API client,
+ version download
+├── Tmux.hs   — Purpur API client,
 └── mine.cfg     — Server config (auto-generated on first run)
 ```
 
