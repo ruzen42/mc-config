@@ -17,18 +17,7 @@ A lightweight CLI tool written in Haskell for managing and launching a [Purpur](
 - Interactively download any Purpur version from the official API
 - CLI interface powered by `optparse-applicative`
 
-## Usage
-
-```
-
-mc-config [-d|--download] [CONFIG]
-```
-
-| Flag / Argument     | Description                                              |
-|---------------------|----------------------------------------------------------|
-| `-g`, `--get-purpur`  | Fetch available Purpur versions and download one         |
-| `CONFIG`            | Path to the config file (default: `./mine.cfg`)          |
-| `-h`, `--help`      | Show help                                                |
+## Usage                                   
 
 ### Run the server
 
@@ -100,7 +89,7 @@ The resolved launch command looks like this:
 
 ## Building
 
-Requires [GHC](https://www.haskell.org/ghc/) and [Cabal](https://www.haskell.org/cabal/) (or [Stack](https://docs.haskellstack.org/)).
+Requires [GHC](https://www.haskell.org/ghc/) and [Cabal](https://www.haskell.org/cabal/)
 
 ```bash
 cabal build
