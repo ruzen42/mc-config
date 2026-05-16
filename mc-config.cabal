@@ -19,24 +19,32 @@ common warnings
 executable mc-config
     import:           warnings
     main-is:          Main.hs
-    other-modules:
-      Config
-      Install
-      Tmux
-      Logger
-    -- other-extensions:
     build-depends:    base
-                    , directory
-                    , aeson
-                    , bytestring
                     , text
-                    , process
-                    , wreq
-                    , lens
-                    , directory
                     , optparse-applicative
                     , rainbow
-                    , toml-parser
-                    , containers
+                    , mc-config
+                    , directory
     hs-source-dirs:   app
+    default-language: GHC2024
+
+library
+    import:           warnings
+    exposed-modules:
+        Config
+        Install
+        Tmux
+        Logger
+    build-depends:    base
+        , rainbow
+        , toml-parser
+        , containers
+        , aeson
+        , process
+        , wreq
+        , lens
+        , directory
+        , bytestring
+        , text
+    hs-source-dirs:   src
     default-language: GHC2024
