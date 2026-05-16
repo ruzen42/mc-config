@@ -3,7 +3,7 @@
 module Main (main) where
 
 import           Config                   (Config (tmuxSession), stdCfg, encodeConfig, decodeConfig)
-import           Control.Monad            (unless)
+import           Control.Monad            (unless, when)
 import           Data.Char                (toLower)
 import           Install                  (downloadVersion, interactiveDownload)
 import           Options.Applicative
@@ -14,11 +14,12 @@ import           System.IO                (BufferMode (NoBuffering),
 import           Tmux                     (runTmux, sendTmux, stopTmux)
 import           Logger                   (successLog, unnecessaryLog, errorLog)
 import qualified Data.Text.IO             as TIO
-import           Data.Text (pack)
-import Rainbow (chunk)
+import           Data.Text                (pack)
+import           Rainbow                  (chunk)
 
 data Command
     = Start     FilePath        -- --start [cfg-path]
+    | Show      FilePath        -- --show [cfg-path]
     | Stop      String          -- --stop  [session-name]
     | GetPurpur (Maybe String)  -- --get-purpur [version]
     | Send      String String   -- --send <session> <command>
@@ -30,6 +31,21 @@ startCmd = Start <$>
     ( flag' ()
         (  long "start"
         <> help "Start the Minecraft server"
+        )
+    *> strArgument
+        (  metavar "CONFIG"
+        <> value   "mine.cfg"
+        <> showDefault
+        <> help    "Path to config file"
+        )
+    )
+
+showCmd :: Parser Command
+showCmd = Show <$>
+    ( flag' ()
+        (  long "show"
+        <> short 'w'
+        <> help "Show config"
         )
     *> strArgument
         (  metavar "CONFIG"
@@ -89,7 +105,7 @@ sendCmd =
                 ))
 
 commands :: Parser Command
-commands = startCmd <|> stopCmd <|> getPurpurCmd <|> sendCmd
+commands = startCmd <|> stopCmd <|> getPurpurCmd <|> sendCmd <|> showCmd
 
 opts :: ParserInfo Command
 opts = info (commands <**> helper)
@@ -104,21 +120,23 @@ main = do
     unnecessaryLog "2026 Ruzen42 MIT License (Minecraft configurator v1.0.0.0)"
     cmd <- execParser opts
     case cmd of
-        Start     cfgPath -> runWithConfig cfgPath
+        Start     cfgPath -> runWithConfig True cfgPath
         Stop      session -> stopTmux session
         GetPurpur mver    -> case mver of
             Nothing         -> interactiveDownload
             Just ver        -> downloadVersion ver
         Send session cmd1 -> sendTmux session cmd1
+        Show      cfgPath -> runWithConfig False cfgPath
 
-runWithConfig :: FilePath -> IO ()
-runWithConfig configPath = do
+-- Bool indicates whether to run the config after loading
+runWithConfig :: Bool -> FilePath -> IO ()
+runWithConfig runnable configPath = do
     exists <- doesFileExist configPath
 
     unless exists $ do
         putStr $ "File " ++ configPath ++ " not found. Create new? [Y/n]: "
-        answer <- getLine
-        if map toLower answer /= "n"
+        answer <- getChar
+        if toLower answer /= 'n'
             then do
                 writeFile configPath (encodeConfig stdCfg)
                 TIO.writeFile "eula.txt" "eula=true"
@@ -133,4 +151,8 @@ runWithConfig configPath = do
         Left err -> do
             errorLog $ "invalid config" <> (chunk $ pack err)
             exitFailure
-        Right cfg -> print cfg >> runTmux (tmuxSession cfg) (show cfg)
+        Right cfg -> do
+            print cfg
+            putStrLn ""
+            TIO.putStrLn file
+            when runnable $ runTmux (tmuxSession cfg) (show cfg)
