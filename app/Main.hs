@@ -30,13 +30,14 @@ startCmd :: Parser Command
 startCmd = Start <$>
     ( flag' ()
         (  long "start"
-        <> help "Start the Minecraft server"
+        <> short 's' 
+        <> help "start the Minecraft server"
         )
     *> strArgument
         (  metavar "CONFIG"
         <> value   "mine.cfg"
         <> showDefault
-        <> help    "Path to config file"
+        <> help    "path to config file"
         )
     )
 
@@ -44,14 +45,14 @@ showCmd :: Parser Command
 showCmd = Show <$>
     ( flag' ()
         (  long "show"
-        <> short 'w'
-        <> help "Show config"
+        <> short 'o'
+        <> help "show config"
         )
     *> strArgument
         (  metavar "CONFIG"
         <> value   "mine.cfg"
         <> showDefault
-        <> help    "Path to config file"
+        <> help    "path to config file"
         )
     )
 
@@ -60,7 +61,8 @@ stopCmd :: Parser Command
 stopCmd = Stop <$>
     ( flag' ()
         (  long "stop"
-        <> help "Stop the Minecraft server (sends /stop via tmux)"
+        <> short 't' 
+        <> help "stop the Minecraft server (sends /stop in tmux session)"
         )
     *> strArgument
         (  metavar "SESSION"
@@ -75,11 +77,12 @@ getPurpurCmd :: Parser Command
 getPurpurCmd = GetPurpur <$>
     ( flag' ()
         (  long "get-purpur"
-        <> help "Download a Purpur build (omit version for interactive selection)"
+        <> short 'g' 
+        <> help "download a Purpur build (omit version for interactive selection)"
         )
     *> optional (strArgument
         (  metavar "VERSION"
-        <> help    "Purpur version to download, e.g. 26.1.2"
+        <> help    "version to download, e.g. 26.2"
         ))
     )
 
@@ -90,7 +93,7 @@ sendCmd =
     flag' ()
         (  long  "send"
         <> short 'S'
-        <> help  "Send a command to the running server via tmux"
+        <> help  "send a command to the running server via tmux"
         )
     *> (Send
         <$> strArgument
@@ -101,7 +104,7 @@ sendCmd =
                 )
         <*> strArgument
                 (  metavar "COMMAND"
-                <> help    "Server command, e.g. \"say hello\""
+                <> help    "server command"
                 ))
 
 commands :: Parser Command
@@ -110,14 +113,14 @@ commands = startCmd <|> stopCmd <|> getPurpurCmd <|> sendCmd <|> showCmd
 opts :: ParserInfo Command
 opts = info (commands <**> helper)
     (  fullDesc
-    <> header   "mc-config - Minecraft server manager"
-    <> progDesc "Start/stop a Purpur server, download builds, send commands"
+    <> header   "mc-config - minecraft server tool"
+    <> progDesc "start/stop a Purpur server, download builds, send commands in tmux session"
     )
 
 main :: IO ()
 main = do
     hSetBuffering stdout NoBuffering
-    unnecessaryLog "2026 Ruzen42 MIT License (Minecraft configurator v1.0.0.0)"
+    unnecessaryLog "2026 Ruzen42 MIT License (Minecraft configurator v1.3.0.0)"
     cmd <- execParser opts
     case cmd of
         Start     cfgPath -> runWithConfig True cfgPath
@@ -128,23 +131,24 @@ main = do
         Send session cmd1 -> sendTmux session cmd1
         Show      cfgPath -> runWithConfig False cfgPath
 
--- Bool indicates whether to run the config after loading
+-- bool indicates whether to run the config after loading
 runWithConfig :: Bool -> FilePath -> IO ()
 runWithConfig runnable configPath = do
     exists <- doesFileExist configPath
 
     unless exists $ do
-        putStr $ "File " ++ configPath ++ " not found. Create new? [Y/n]: "
+        putStr $ "file " ++ configPath ++ " not found. Create new? [Y/n]: "
         answer <- getChar
         if toLower answer /= 'n'
             then do
                 writeFile configPath (encodeConfig stdCfg)
                 TIO.writeFile "eula.txt" "eula=true"
-                successLog $ "Created new config: "
+                unnecessaryLog $ "created: eula.txt -> eula=true" 
+                successLog $ "created new config: "
                 putStrLn configPath
             else exitSuccess
 
-    putStrLn $ "Processed with config: " ++ configPath
+    putStrLn $ "processed with config: " ++ configPath
     file <- TIO.readFile configPath
 
     case decodeConfig file of

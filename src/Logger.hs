@@ -12,15 +12,15 @@ unnecessaryLog msg = putChunkLn $ msg & fore grey
 
 errorLog :: Chunk -> IO ()
 errorLog msg = do
-  putChunk $ "Error: " & fore red & bold
+  putChunk $ "bad: " & fore red & bold
   putChunkLn msg
 
 successLog :: Chunk -> IO ()
 successLog msg = do
-  putChunk $ "Success: " & fore green & bold
+  putChunk $ "good: " & fore green & bold
   putChunkLn msg
 
 warnLog :: Chunk -> IO ()
 warnLog msg = do
-  putChunk $ "Warning: " & fore yellow & bold
+  putChunk $ "warn: " & fore yellow & bold
   putChunkLn msg

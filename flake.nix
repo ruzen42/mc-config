@@ -1,6 +1,4 @@
 {
-  description = "mc-config - Minecraft Purpur server manager";
-
   inputs = {
     nixpkgs.url      = "github:NixOS/nixpkgs/nixpkgs-unstable";
     flake-utils.url  = "github:numtide/flake-utils";
@@ -15,7 +13,7 @@
 
         mc-config = haskell.mkDerivation {
           pname   = "mc-config";
-          version = "1.1.0.0";
+          version = "1.2.0.0";
           src     = ./.;
 
           isLibrary    = false;
@@ -40,35 +38,22 @@
         };
 
       in {
-        # nix build
         packages.default = mc-config;
 
-        # nix run
         apps.default = flake-utils.lib.mkApp {
           drv = mc-config;
         };
 
-        # nix develop
         devShells.default = pkgs.mkShell {
           name = "mc-config-dev";
 
           buildInputs = with pkgs; [
-            # Haskell toolchain
             ghc
             cabal-install
-            haskell-language-server
-            hlint
-            ormolu
-
-            # Runtime deps (wreq needs OpenSSL/zlib at link time)
             zlib
             openssl
-
-            # Useful in dev
-            tmux
           ];
 
-          # Let Cabal find system libs
           LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath (with pkgs; [
             zlib
             openssl
