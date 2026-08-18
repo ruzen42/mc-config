@@ -2,113 +2,105 @@
 
 module Main (main) where
 
-import           Config                   (Config (tmuxSession), stdCfg, encodeConfig, decodeConfig)
-import           Control.Monad            (unless, when)
-import           Data.Char                (toLower)
-import           Install                  (downloadVersion, interactiveDownload)
-import           Options.Applicative
-import           System.Directory         (doesFileExist)
-import           System.Exit              (exitFailure, exitSuccess)
-import           System.IO                (BufferMode (NoBuffering),
-                                           hSetBuffering, stdout)
-import           Tmux                     (runTmux, sendTmux, stopTmux)
-import           Logger                   (successLog, unnecessaryLog, errorLog)
-import qualified Data.Text.IO             as TIO
-import           Data.Text                (pack)
-import           Rainbow                  (chunk)
+import Config (Config (tmuxSession), stdCfg, encodeConfig, decodeConfig)
+import Control.Monad (unless, when)
+import Data.Char (toLower)
+import Install (downloadVersion, interactiveDownload)
+import Options.Applicative
+import System.Directory (doesFileExist, removeFile)
+import System.Exit (exitFailure, exitSuccess)
+import System.IO (BufferMode (NoBuffering), hSetBuffering, stdout)
+import Tmux (runTmux, sendTmux, stopTmux)
+import Logger (successLog, unnecessaryLog, errorLog)
+import qualified Data.Text.IO as TIO
+import Data.Text (Text)
+import Rainbow (chunk)
+import Plugin.Manage (fetchPlugin)
+import qualified Data.Text as T
 
 data Command
-    = Start     FilePath        -- --start [cfg-path]
-    | Show      FilePath        -- --show [cfg-path]
-    | Stop      String          -- --stop  [session-name]
-    | GetPurpur (Maybe String)  -- --get-purpur [version]
-    | Send      String String   -- --send <session> <command>
-    deriving Show
+    = Start     FilePath        
+    | Show      FilePath       
+    | Stop      String        
+    | GetPurpur (Maybe String)  
+    | Send      String String  
+    | Plugin    PluginCommand
 
--- --start [CONFIG]   default: mine.cfg
+data PluginCommand
+  = PluginAdd    Text
+  | PluginRemove Text
+
+
+pluginAddCmd :: Parser PluginCommand
+pluginAddCmd = PluginAdd . T.pack <$> argument str
+  (  metavar "PLUGIN"
+  <> help "plugin name for downloading"
+  )
+
+pluginRemoveCmd :: Parser PluginCommand 
+pluginRemoveCmd = PluginRemove . T.pack <$> argument str
+  (  metavar "PLUGIN"
+  <> help "plugin name for removing"
+  )
+
+pluginSubparser :: Parser PluginCommand 
+pluginSubparser = hsubparser
+  (  command "add" (info pluginAddCmd (progDesc "download plugin"))
+  <> command "remove" (info pluginRemoveCmd (progDesc "remove plugin"))
+  )
+
 startCmd :: Parser Command
-startCmd = Start <$>
-    ( flag' ()
-        (  long "start"
-        <> short 's' 
-        <> help "start the Minecraft server"
-        )
-    *> strArgument
-        (  metavar "CONFIG"
-        <> value   "mine.cfg"
-        <> showDefault
-        <> help    "path to config file"
-        )
-    )
+startCmd = Start <$> argument str
+  (  metavar "CONFIG"
+  <> value   "mconfig.toml"
+  <> showDefault
+  <> help    "path to config file"
+  )
 
 showCmd :: Parser Command
-showCmd = Show <$>
-    ( flag' ()
-        (  long "show"
-        <> short 'o'
-        <> help "show config"
-        )
-    *> strArgument
-        (  metavar "CONFIG"
-        <> value   "mine.cfg"
-        <> showDefault
-        <> help    "path to config file"
-        )
-    )
+showCmd = Show <$> argument str
+  (  metavar "CONFIG"
+  <> value   "mconfig.toml"
+  <> showDefault
+  <> help    "path to config file"
+  )
 
--- --stop [SESSION]   default: minecraft
 stopCmd :: Parser Command
-stopCmd = Stop <$>
-    ( flag' ()
-        (  long "stop"
-        <> short 't' 
-        <> help "stop the Minecraft server (sends /stop in tmux session)"
-        )
-    *> strArgument
-        (  metavar "SESSION"
-        <> value   "minecraft"
-        <> showDefault
-        <> help    "tmux session name"
-        )
-    )
+stopCmd = Stop <$> argument str
+  (  metavar "SESSION"
+  <> value   "minecraft"
+  <> showDefault
+  <> help    "tmux session name"
+  )
 
--- --get-purpur [VERSION]   optional; if omitted → interactive selection
 getPurpurCmd :: Parser Command
-getPurpurCmd = GetPurpur <$>
-    ( flag' ()
-        (  long "get-purpur"
-        <> short 'g' 
-        <> help "download a Purpur build (omit version for interactive selection)"
-        )
-    *> optional (strArgument
-        (  metavar "VERSION"
-        <> help    "version to download, e.g. 26.2"
-        ))
-    )
-
--- --send <SESSION> <COMMAND>   required
+getPurpurCmd = GetPurpur <$> optional (argument str
+  (  metavar "VERSION"
+  <> help    "version to download, e.g. 26.2"
+  ))
 
 sendCmd :: Parser Command
-sendCmd =
-    flag' ()
-        (  long  "send"
-        <> short 'S'
-        <> help  "send a command to the running server via tmux"
+sendCmd = Send
+    <$> argument str
+        (  metavar "SESSION"
+        <> value "minecraft"
+        <> showDefault
+        <> help "tmux session name"
         )
-    *> (Send
-        <$> strArgument
-                (  metavar "SESSION"
-                <> value   "minecraft"
-                <> showDefault
-                <> help    "tmux session to send the command to"
-                )
-        <*> strArgument
-                (  metavar "COMMAND"
-                <> help    "server command"
-                ))
+    <*> argument str
+        (  metavar "COMMAND"
+        <> help "command for server"
+        )
 
 commands :: Parser Command
-commands = startCmd <|> stopCmd <|> getPurpurCmd <|> sendCmd <|> showCmd
+commands = hsubparser
+    (  command "start"      (info startCmd     (progDesc "start server"))
+    <> command "show"       (info showCmd      (progDesc "show config"))
+    <> command "stop"       (info stopCmd      (progDesc "stop server"))
+    <> command "get-purpur" (info getPurpurCmd (progDesc "get Purpur build"))
+    <> command "send"       (info sendCmd      (progDesc "send command to tmux session"))
+    <> command "plugin"     (info (Plugin <$> pluginSubparser) (progDesc "plugin management"))
+    )
 
 opts :: ParserInfo Command
 opts = info (commands <**> helper)
@@ -120,16 +112,22 @@ opts = info (commands <**> helper)
 main :: IO ()
 main = do
     hSetBuffering stdout NoBuffering
-    unnecessaryLog "2026 Ruzen42 MIT License (Minecraft configurator v1.3.0.0)"
+    unnecessaryLog "2026 MIT License (https://github.com/ruzen42/mc-config v2.0)"
     cmd <- execParser opts
     case cmd of
-        Start     cfgPath -> runWithConfig True cfgPath
-        Stop      session -> stopTmux session
-        GetPurpur mver    -> case mver of
-            Nothing         -> interactiveDownload
-            Just ver        -> downloadVersion ver
-        Send session cmd1 -> sendTmux session cmd1
-        Show      cfgPath -> runWithConfig False cfgPath
+        Start cfgPath      -> runWithConfig True cfgPath
+        Show cfgPath       -> runWithConfig False cfgPath
+        Stop session       -> stopTmux session
+        GetPurpur mver     -> case mver of
+            Nothing  -> interactiveDownload
+            Just ver -> downloadVersion ver
+        Send session cmd1  -> sendTmux session cmd1
+        Plugin (PluginAdd name) -> do
+            res <- fetchPlugin name
+            case res of
+                Left err -> errorLog (chunk err)
+                Right msg -> successLog (chunk msg)
+        Plugin (PluginRemove name) -> removeFile $ T.unpack name 
 
 -- bool indicates whether to run the config after loading
 runWithConfig :: Bool -> FilePath -> IO ()
@@ -153,7 +151,7 @@ runWithConfig runnable configPath = do
 
     case decodeConfig file of
         Left err -> do
-            errorLog $ "invalid config" <> (chunk $ pack err)
+            errorLog $ "invalid config" <> (chunk $ T.pack err)
             exitFailure
         Right cfg -> do
             print cfg

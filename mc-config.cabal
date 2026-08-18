@@ -1,6 +1,6 @@
 cabal-version:      3.8
 name:               mc-config
-version:            1.2.0.0
+version:            2.0.0 
 -- synopsis:
 description:        Minecraft server configuration tool
 license:            MIT
@@ -35,6 +35,7 @@ library
         Install
         Tmux
         Logger
+        Plugin.Manage
     build-depends:    base
         , rainbow
         , toml-parser
@@ -46,5 +47,6 @@ library
         , directory
         , bytestring
         , text
+        , filepath
     hs-source-dirs:   src
     default-language: GHC2024

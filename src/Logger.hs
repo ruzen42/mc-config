@@ -2,10 +2,10 @@
 
 module Logger (unnecessaryLog, errorLog, successLog, warnLog) where
 
-import           Rainbow (putChunkLn, putChunk, Chunk
-                         , fore, grey
-                         , red, green, yellow, bold)
-import           Data.Function ((&))
+import Rainbow (putChunkLn, putChunk, Chunk
+                , fore, grey, red, green, 
+                yellow, bold)
+import Data.Function ((&))
 
 unnecessaryLog :: Chunk -> IO ()
 unnecessaryLog msg = putChunkLn $ msg & fore grey
