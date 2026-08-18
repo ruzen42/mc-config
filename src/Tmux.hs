@@ -9,12 +9,13 @@ import Logger (errorLog, successLog)
 checkTmux :: IO Bool
 checkTmux = do
     result <- findExecutable "tmux"
-    if result == Nothing then do
+    case result of
+      Nothing -> do 
         errorLog "Tmux not found"
         return False
-    else do
-        successLog $ "Tmux found on path:"
-        putStrLn $ "\t" ++ show result
+      Just tmux -> do
+        successLog $ "tmux found on path:"
+        putStrLn $ "\t" ++ tmux 
         return True
 
 runTmux :: String -> String -> IO ()
@@ -23,23 +24,23 @@ runTmux session cmd = do
     if not isTmux then errorLog "Tmux not found, cannot run"
     else do
         let tmuxCmd = "tmux new-session -d -s " ++ session ++ " '" ++ cmd ++ " || read'"
-        putStrLn $ "Launching tmux session: " ++ tmuxCmd
+        putStrLn $ "launching tmux session: " ++ tmuxCmd
         callCommand tmuxCmd
 
 stopTmux :: String -> IO ()
 stopTmux session = do
     isTmux <- checkTmux
-    if not isTmux then errorLog "Tmux not found, cannot stop"
+    if not isTmux then errorLog "tmux not found, cannot stop"
     else do
         let tmuxCmd = "tmux send-keys -t " ++ session ++ " \"stop\" ENTER"
-        putStrLn $ "Stopping tmux session: " ++ session
+        putStrLn $ "stopping tmux session: " ++ session
         callCommand tmuxCmd
 
 sendTmux :: String -> String -> IO ()
 sendTmux session cmd = do
     isTmux <- checkTmux
-    if not isTmux then errorLog "Tmux not found, cannot send"
+    if not isTmux then errorLog "tmux not found, cannot send"
     else do
         let tmuxCmd = "tmux send-keys -t " ++ session ++ " \"" ++ cmd ++ "\" ENTER"
-        putStrLn $ "Sending command to tmux session: " ++ tmuxCmd
+        putStrLn $ "sending command to tmux session: " ++ tmuxCmd
         callCommand tmuxCmd
