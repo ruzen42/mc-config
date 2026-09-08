@@ -52,7 +52,7 @@ pluginSubparser = hsubparser
 startCmd :: Parser Command
 startCmd = Start <$> argument str
   (  metavar "CONFIG"
-  <> value   "mconfig.toml"
+  <> value   "mconfig.dhall"
   <> showDefault
   <> help    "path to config file"
   )
@@ -60,7 +60,7 @@ startCmd = Start <$> argument str
 showCmd :: Parser Command
 showCmd = Show <$> argument str
   (  metavar "CONFIG"
-  <> value   "mconfig.toml"
+  <> value   "mconfig.dhall"
   <> showDefault
   <> help    "path to config file"
   )
