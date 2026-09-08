@@ -5,6 +5,8 @@ module Tmux (checkTmux, runTmux, stopTmux, sendTmux) where
 import System.Directory (findExecutable)
 import System.Process (callCommand)
 import Logger (errorLog, successLog)
+import Data.Text (Text)
+import qualified Data.Text as T 
 
 checkTmux :: IO Bool
 checkTmux = do
@@ -18,12 +20,13 @@ checkTmux = do
         putStrLn $ "\t" ++ tmux 
         return True
 
-runTmux :: String -> String -> IO ()
+runTmux :: Text -> String -> IO ()
 runTmux session cmd = do
     isTmux <- checkTmux
-    if not isTmux then errorLog "Tmux not found, cannot run"
+    if not isTmux then do 
+      errorLog "Tmux not found, cannot run"
     else do
-        let tmuxCmd = "tmux new-session -d -s " ++ session ++ " '" ++ cmd ++ " || read'"
+        let tmuxCmd = "tmux new-session -d -s " ++ (T.unpack session) ++ " '" ++ cmd ++ " || read'"
         putStrLn $ "launching tmux session: " ++ tmuxCmd
         callCommand tmuxCmd
 

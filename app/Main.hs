@@ -8,7 +8,7 @@ import Data.Char (toLower)
 import Install (downloadVersion, interactiveDownload)
 import Options.Applicative
 import System.Directory (doesFileExist, removeFile)
-import System.Exit (exitFailure, exitSuccess)
+import System.Exit (exitSuccess)
 import System.IO (BufferMode (NoBuffering), hSetBuffering, stdout)
 import Tmux (runTmux, sendTmux, stopTmux)
 import Logger (successLog, unnecessaryLog, errorLog)
@@ -139,7 +139,7 @@ runWithConfig runnable configPath = do
         answer <- getChar
         if toLower answer /= 'n'
             then do
-                writeFile configPath (encodeConfig stdCfg)
+                TIO.writeFile configPath (encodeConfig stdCfg)
                 TIO.writeFile "eula.txt" "eula=true"
                 unnecessaryLog $ "created: eula.txt -> eula=true" 
                 successLog $ "created new config: "
@@ -149,12 +149,11 @@ runWithConfig runnable configPath = do
     putStrLn $ "processed with config: " ++ configPath
     file <- TIO.readFile configPath
 
-    case decodeConfig file of
-        Left err -> do
-            errorLog $ "invalid config" <> (chunk $ T.pack err)
-            exitFailure
-        Right cfg -> do
-            print cfg
-            putStrLn ""
-            TIO.putStrLn file
-            when runnable $ runTmux (tmuxSession cfg) (show cfg)
+    decoded <- decodeConfig file 
+    print decoded
+    putStrLn ""
+    TIO.putStrLn file
+    let dSession = tmuxSession decoded
+    case dSession of
+      Just session -> when runnable $ runTmux session (show decoded) 
+      Nothing -> pure ()
