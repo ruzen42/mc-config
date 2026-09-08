@@ -7,37 +7,42 @@ import Control.Lens ((^.))
 import Data.Aeson (FromJSON, decode)
 import qualified Data.ByteString.Lazy as BL
 import GHC.Generics (Generic)
-import Network.Wreq (get, responseBody)
-import System.IO (hFlush, stdout)
+import qualified Network.Wreq as NW 
 import Text.Read (readMaybe)
 import Control.Monad (when, forM_)
 import Logger (errorLog, successLog)
+import Data.Text (Text)
+import qualified Data.Text as T 
+import Relude.Lifted.Handle (hFlush, stdout)
+import qualified Data.Text.IO as TIO
+import Relude (writeFileBS)
 
 data PurpurVersions = PurpurVersions
-    { versions :: [String]
+    { versions :: [Text]
     } deriving (Generic, Show)
 
 instance FromJSON PurpurVersions
 
-getAvailableVersions :: IO [String]
+getAvailableVersions :: IO [Text]
 getAvailableVersions = do
-    r <- get "https://api.purpurmc.org/v2/purpur/"
-    let body = r ^. responseBody :: BL.ByteString
-    case decode body of
+    r <- NW.get "https://api.purpurmc.org/v2/purpur/"
+    let body = r ^. NW.responseBody :: BL.ByteString
+        out  = decode body :: Maybe PurpurVersions 
+    case out of
         Just pv -> return $ reverse $ versions pv
         Nothing -> return []
 
-downloadVersion :: String -> IO ()
+downloadVersion :: Text -> IO ()
 downloadVersion ver = do
-    let url      = "https://api.purpurmc.org/v2/purpur/" ++ ver ++ "/latest/download"
-        fileName = "purpur-" ++ ver ++ ".jar"
-    putStrLn $ "downloading " ++ fileName ++ "..."
+    let url      = "https://api.purpurmc.org/v2/purpur/" <> ver <> "/latest/download" :: Text
+        fileName = "purpur-" <> ver <> ".jar" :: Text
+    TIO.putStrLn $ "downloading " <> fileName <> "..."
     hFlush stdout
-    r <- get url
-    let body = r ^. responseBody :: BL.ByteString
-    BL.writeFile fileName body
+    r <- NW.get $ T.unpack url
+    let body = r ^. NW.responseBody :: BL.ByteString
+    writeFileBS (T.unpack fileName) body
     successLog "done:"
-    putStrLn $ "\t " ++ fileName
+    TIO.putStrLn $ "\t " <> fileName
 
 interactiveDownload :: IO ()
 interactiveDownload = do
@@ -48,10 +53,10 @@ interactiveDownload = do
         else do
             let numbered = zip [1..] vs
             forM_ numbered $ (\(i, v) -> do
-                putStr $ show (i :: Int) ++ ") " ++ v ++ " "
+                putStr $ show (i :: Int) ++ ") " <> v <> " "
                 when (i `mod` 3 == 0) $ putStrLn ""
                 )
-            putStr $ "\nselect a version [1-" ++ show (length vs) ++ "]: "
+            putStr $ "\nselect a version [1-" <> show (length vs) <> "]: "
             hFlush stdout
             input <- getLine
             case readMaybe input :: Maybe Int of

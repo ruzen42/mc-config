@@ -2,12 +2,14 @@
 {-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE DeriveAnyClass    #-}
 
-module Config (Config (..), stdCfg, decodeConfig, encodeConfig) where
+module Config (Config (..), stdCfg, decodeConfig, encodeConfig, generateConfig) where
 
 import Dhall
 import Dhall.Core as DH
 import qualified Dhall.Marshal.Encode as ME 
-
+import TextShow (TextShow(..), Builder, showb, fromText)
+import System.Directory (findExecutable)
+import System.SysInfo (sysInfo, SysInfo (totalram))
 import qualified Data.Text as T
 
 data Config = Config
@@ -20,24 +22,47 @@ data Config = Config
     , tmuxSession :: Maybe Text
     } deriving (Eq, Generic, ToDhall, FromDhall)
 
-instance Show Config where
-    show cfg =
-        (T.unpack (javaPath cfg))
-        ++ " -Xms" ++ show (startRam cfg) ++ "G"
-        ++ " -Xmx" ++ show (maxRam   cfg) ++ "G"
-        ++ T.unpack (formatTextOptions $ options cfg)
-        ++ " -jar " ++ (T.unpack (jarPath cfg))
-        ++ if guiMode cfg then " " else " nogui"
-      where
-        formatTextOptions :: [Text] -> Text
-        formatTextOptions []     = ""
-        formatTextOptions (x:xs) = " -XX:" <> x <> formatTextOptions xs
+instance TextShow Config where
+  showb cfg =
+       fromText (javaPath cfg)
+    <> " -Xms" <> showb (startRam cfg) <> "G"
+    <> " -Xmx" <> showb (maxRam cfg) <> "G"
+    <> formatTextOptions (options cfg)
+    <> " -jar " <> fromText (jarPath cfg)
+    <> if guiMode cfg then " " else " nogui"
+    where
+      formatTextOptions :: [Text] -> Builder
+      formatTextOptions = foldMap (\opt -> " -XX:" <> fromText opt)
 
 decodeConfig :: Text -> IO Config
 decodeConfig raw = input auto raw 
 
 encodeConfig :: Config -> Text
-encodeConfig config = DH.pretty (embed ME.inject config)
+encodeConfig config = DH.pretty $ embed ME.inject config
+
+getTotalRamMB :: IO Int
+getTotalRamMB = do
+    info <- sysInfo
+    -- bytes -> gibibytes
+    pure $ (totalram info) `div` (1024 * 1024) -- freeram maybe
+
+
+generateConfig :: IO (Either Text Config)
+generateConfig = do
+  maybeExe <- findExecutable "java" 
+  case maybeExe of
+    Just exe -> 
+      total <- getTotalRamMB
+      Right $ Config 
+        { options     = []
+        , javaPath    = (T.pack exe)
+        , jarPath     = "purpur.jar"
+        , startRam    = total / 2 - 2 
+        , maxRam      = total - 2 
+        , guiMode     = False
+        , tmuxSession = Nothing 
+        }
+    Nothing -> Left "java not found in $PATH"
 
 stdCfg :: Config
 stdCfg = Config
@@ -45,7 +70,7 @@ stdCfg = Config
     , javaPath    = "/usr/bin/java"
     , jarPath     = "purpur.jar"
     , startRam    = 2
-    , maxRam      = 2
+    , maxRam      = 4
     , guiMode     = False
     , tmuxSession = Nothing 
     }

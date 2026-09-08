@@ -3,17 +3,14 @@
 module Main (main) where
 
 import Config (Config (tmuxSession), stdCfg, encodeConfig, decodeConfig)
-import Control.Monad (unless, when)
 import Data.Char (toLower)
 import Install (downloadVersion, interactiveDownload)
 import Options.Applicative
+import System.IO (getChar)
 import System.Directory (doesFileExist, removeFile)
-import System.Exit (exitSuccess)
-import System.IO (BufferMode (NoBuffering), hSetBuffering, stdout)
 import Tmux (runTmux, sendTmux, stopTmux)
 import Logger (successLog, unnecessaryLog, errorLog)
 import qualified Data.Text.IO as TIO
-import Data.Text (Text)
 import Rainbow (chunk)
 import Plugin.Manage (fetchPlugin)
 import qualified Data.Text as T

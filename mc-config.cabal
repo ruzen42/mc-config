@@ -22,7 +22,12 @@ executable mc-config
                     , rainbow
                     , mc-config
                     , directory
-    hs-source-dirs:   app
+                    , relude
+    hs-source-dirs: app
+    mixins:           
+        base hiding (Prelude)
+      , relude (Relude as Prelude)
+      , relude 
     default-language: GHC2024
 
 library
@@ -37,13 +42,20 @@ library
         , rainbow
         , dhall
         , containers
+        , sysinfo
         , aeson
         , process
+        , relude
         , wreq
+        , text-show
         , lens
         , directory
         , bytestring
         , text
         , filepath
     hs-source-dirs:   src
+    mixins:           
+        base hiding (Prelude)
+      , relude (Relude as Prelude)
+      , relude 
     default-language: GHC2024
