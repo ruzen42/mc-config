@@ -14,19 +14,46 @@ import qualified Data.Text.IO as TIO
 import Rainbow (chunk)
 import Plugin.Manage (fetchPlugin)
 import qualified Data.Text as T
+import TextShow (showb, toText)
 
 data Command
-    = Start     FilePath        
-    | Show      FilePath       
-    | Stop      String        
-    | GetPurpur (Maybe String)  
-    | Send      String String  
+    = Start     Text        
+    | Show      Text       
+    | Stop      Text        
+    | GetPurpur (Maybe Text)  
+    | Send      Text Text 
     | Plugin    PluginCommand
+    | Config    ConfigCommand
 
 data PluginCommand
   = PluginAdd    Text
   | PluginRemove Text
 
+data ConfigCommand 
+  = Generate (Maybe Text)
+  | Standard (Maybe Text)
+
+configCommandGenerate :: Parser ConfigCommand 
+configCommandGenerate = Generate <$> optional (argument str
+  (  metavar "CONFIG"
+  <> showDefault
+  <> value "mconfig.dhall"
+  <> help "generate config"
+  )) 
+
+configCommandStandard :: Parser ConfigCommand 
+configCommandStandard = Standard <$> optional (argument str
+  (  metavar "CONFIG"
+  <> showDefault
+  <> value "mconfig.dhall"
+  <> help "standard config"
+  ))
+
+configCommand :: Parser ConfigCommand 
+configCommand = hsubparser 
+  (  command "generate" (info configCommandGenerate (progDesc "generate config for this system"))
+  <> command "standard" (info configCommandStandard (progDesc "standard config"))
+  )
 
 pluginAddCmd :: Parser PluginCommand
 pluginAddCmd = PluginAdd . T.pack <$> argument str
@@ -97,6 +124,7 @@ commands = hsubparser
     <> command "get-purpur" (info getPurpurCmd (progDesc "get Purpur build"))
     <> command "send"       (info sendCmd      (progDesc "send command to tmux session"))
     <> command "plugin"     (info (Plugin <$> pluginSubparser) (progDesc "plugin management"))
+    <> command "config"     (info (Config <$> configCommand) (progDesc "config management"))
     )
 
 opts :: ParserInfo Command
@@ -125,32 +153,34 @@ main = do
                 Left err -> errorLog (chunk err)
                 Right msg -> successLog (chunk msg)
         Plugin (PluginRemove name) -> removeFile $ T.unpack name 
+        Config _                   -> unnecessaryLog "config command processed"
 
--- bool indicates whether to run the config after loading
-runWithConfig :: Bool -> FilePath -> IO ()
+runWithConfig :: Bool -> Text -> IO ()
 runWithConfig runnable configPath = do
-    exists <- doesFileExist configPath
+    let pathStr = T.unpack configPath
+    exists <- doesFileExist pathStr
 
     unless exists $ do
-        putStr $ "file " ++ configPath ++ " not found. Create new? [Y/n]: "
-        answer <- getChar
+        TIO.putStr $ "file " <> configPath <> " not found. Create new? [Y/n]: "
+        answer <- getChar 
         if toLower answer /= 'n'
             then do
-                TIO.writeFile configPath (encodeConfig stdCfg)
+                TIO.writeFile pathStr (encodeConfig stdCfg)
                 TIO.writeFile "eula.txt" "eula=true"
-                unnecessaryLog $ "created: eula.txt -> eula=true" 
-                successLog $ "created new config: "
-                putStrLn configPath
+                unnecessaryLog "created: eula.txt -> eula=true" 
+                successLog "created new config: "
+                TIO.putStrLn configPath
             else exitSuccess
 
-    putStrLn $ "processed with config: " ++ configPath
-    file <- TIO.readFile configPath
+    TIO.putStrLn $ "processed with config: " <> configPath
+    file <- TIO.readFile pathStr
 
     decoded <- decodeConfig file 
-    print decoded
-    putStrLn ""
-    TIO.putStrLn file
+    TIO.putStrLn $ config2Text decoded
     let dSession = tmuxSession decoded
     case dSession of
-      Just session -> when runnable $ runTmux session (show decoded) 
+      Just session -> when runnable $ runTmux session (config2Text decoded)
       Nothing -> pure ()
+    where 
+      config2Text :: Config -> Text
+      config2Text input = TextShow.toText $ showb input

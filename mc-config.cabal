@@ -23,6 +23,7 @@ executable mc-config
                     , mc-config
                     , directory
                     , relude
+                    , text-show
     hs-source-dirs: app
     mixins:           
         base hiding (Prelude)

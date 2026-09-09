@@ -5,8 +5,8 @@ module Tmux (checkTmux, runTmux, stopTmux, sendTmux) where
 import System.Directory (findExecutable)
 import System.Process (callCommand)
 import Logger (errorLog, successLog)
-import Data.Text (Text)
 import qualified Data.Text as T 
+import qualified Data.Text.IO as TIO
 
 checkTmux :: IO Bool
 checkTmux = do
@@ -16,34 +16,34 @@ checkTmux = do
         errorLog "Tmux not found"
         return False
       Just tmux -> do
-        successLog $ "tmux found on path:"
-        putStrLn $ "\t" ++ tmux 
+        successLog "tmux found on path:"
+        TIO.putStrLn $ "\t" <> T.pack tmux 
         return True
 
-runTmux :: Text -> String -> IO ()
+runTmux :: Text -> Text -> IO ()
 runTmux session cmd = do
     isTmux <- checkTmux
-    if not isTmux then do 
+    if not isTmux then 
       errorLog "Tmux not found, cannot run"
     else do
-        let tmuxCmd = "tmux new-session -d -s " ++ (T.unpack session) ++ " '" ++ cmd ++ " || read'"
-        putStrLn $ "launching tmux session: " ++ tmuxCmd
-        callCommand tmuxCmd
+        let tmuxCmd = "tmux new-session -d -s " <> session <> " '" <> cmd <> " || read'"
+        TIO.putStrLn $ "launching tmux session: " <> tmuxCmd
+        callCommand (T.unpack tmuxCmd)
 
-stopTmux :: String -> IO ()
+stopTmux :: Text -> IO ()
 stopTmux session = do
     isTmux <- checkTmux
     if not isTmux then errorLog "tmux not found, cannot stop"
     else do
-        let tmuxCmd = "tmux send-keys -t " ++ session ++ " \"stop\" ENTER"
-        putStrLn $ "stopping tmux session: " ++ session
-        callCommand tmuxCmd
+        let tmuxCmd = "tmux send-keys -t " <> session <> " \"stop\" ENTER"
+        TIO.putStrLn $ "stopping tmux session: " <> session
+        callCommand (T.unpack tmuxCmd)
 
-sendTmux :: String -> String -> IO ()
+sendTmux :: Text -> Text -> IO ()
 sendTmux session cmd = do
     isTmux <- checkTmux
     if not isTmux then errorLog "tmux not found, cannot send"
     else do
-        let tmuxCmd = "tmux send-keys -t " ++ session ++ " \"" ++ cmd ++ "\" ENTER"
-        putStrLn $ "sending command to tmux session: " ++ tmuxCmd
-        callCommand tmuxCmd
+        let tmuxCmd = "tmux send-keys -t " <> session <> " \"" <> cmd <> "\" ENTER"
+        TIO.putStrLn $ "sending command to tmux session: " <> tmuxCmd
+        callCommand (T.unpack tmuxCmd)

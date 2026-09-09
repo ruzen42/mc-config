@@ -5,17 +5,15 @@ module Install (getAvailableVersions, interactiveDownload, downloadVersion) wher
 
 import Control.Lens ((^.))
 import Data.Aeson (FromJSON, decode)
-import qualified Data.ByteString.Lazy as BL
-import GHC.Generics (Generic)
-import qualified Network.Wreq as NW 
-import Text.Read (readMaybe)
-import Control.Monad (when, forM_)
 import Logger (errorLog, successLog)
-import Data.Text (Text)
+import qualified System.IO as SO
+
 import qualified Data.Text as T 
-import Relude.Lifted.Handle (hFlush, stdout)
+import qualified Data.List as L 
 import qualified Data.Text.IO as TIO
-import Relude (writeFileBS)
+import qualified Data.Text.Read as TR 
+import qualified Network.Wreq as NW 
+import qualified Data.ByteString.Lazy as BL
 
 data PurpurVersions = PurpurVersions
     { versions :: [Text]
@@ -37,12 +35,17 @@ downloadVersion ver = do
     let url      = "https://api.purpurmc.org/v2/purpur/" <> ver <> "/latest/download" :: Text
         fileName = "purpur-" <> ver <> ".jar" :: Text
     TIO.putStrLn $ "downloading " <> fileName <> "..."
-    hFlush stdout
+    SO.hFlush SO.stdout
     r <- NW.get $ T.unpack url
     let body = r ^. NW.responseBody :: BL.ByteString
-    writeFileBS (T.unpack fileName) body
+    BL.writeFile (T.unpack fileName) body
     successLog "done:"
     TIO.putStrLn $ "\t " <> fileName
+
+readMaybeText :: Text -> Maybe Int
+readMaybeText txt = case TR.decimal (T.strip txt) of
+  Right (n, rest) | T.null rest -> Just n
+  _                            -> Nothing
 
 interactiveDownload :: IO ()
 interactiveDownload = do
@@ -52,17 +55,19 @@ interactiveDownload = do
         then errorLog "no versions available :("
         else do
             let numbered = zip [1..] vs
-            forM_ numbered $ (\(i, v) -> do
-                putStr $ show (i :: Int) ++ ") " <> v <> " "
-                when (i `mod` 3 == 0) $ putStrLn ""
-                )
+            forM_ numbered $ \(i, v) -> do
+                TIO.putStr $ T.pack (show (i :: Int)) <> ") " <> v <> "\t"
+                when (i `mod` 3 == 0) $ TIO.putStrLn ""
+
+            when (length vs `mod` 3 /= 0) $ TIO.putStrLn ""
+
             putStr $ "\nselect a version [1-" <> show (length vs) <> "]: "
-            hFlush stdout
+            SO.hFlush SO.stdout
             input <- getLine
-            case readMaybe input :: Maybe Int of
+            case readMaybeText input :: Maybe Int of
                 Nothing -> errorLog "invalid input"
                 Just n
                     | n < 1 || n > length vs ->
-                        errorLog $ "number must be between min and max"
+                        errorLog "number must be between min and max"
                     | otherwise ->
-                        downloadVersion (vs !! (n - 1))
+                        downloadVersion (vs L.!! (n - 1))
