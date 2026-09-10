@@ -12,7 +12,7 @@ import Tmux (runTmux, sendTmux, stopTmux)
 import Logger (successLog, unnecessaryLog, errorLog)
 import qualified Data.Text.IO as TIO
 import Rainbow (chunk)
-import Plugin.Manage (fetchPlugin)
+import Plugin.Manage (fetchPlugin, searchPlugins, formatSearchResults)
 import qualified Data.Text as T
 import TextShow (showb, toText)
 
@@ -28,6 +28,7 @@ data Command
 data PluginCommand
   = PluginAdd    Text
   | PluginRemove Text
+  | PluginSearch Text
 
 data ConfigCommand 
   = Generate Text
@@ -67,10 +68,17 @@ pluginRemoveCmd = PluginRemove . T.pack <$> argument str
   <> help "plugin name for removing"
   )
 
+pluginSearchCmd :: Parser PluginCommand
+pluginSearchCmd = PluginSearch . T.pack <$> argument str
+  (  metavar "PLUGIN"
+  <> help "plugin name to search for"
+  )
+
 pluginSubparser :: Parser PluginCommand 
 pluginSubparser = hsubparser
-  (  command "add" (info pluginAddCmd (progDesc "download plugin"))
+  (  command "add"    (info pluginAddCmd    (progDesc "search and download plugin (interactive if multiple matches)"))
   <> command "remove" (info pluginRemoveCmd (progDesc "remove plugin"))
+  <> command "search" (info pluginSearchCmd (progDesc "search plugins without downloading"))
   )
 
 startCmd :: Parser Command
@@ -152,7 +160,12 @@ main = do
             case res of
                 Left err -> errorLog (chunk err)
                 Right msg -> successLog (chunk msg)
-        Plugin (PluginRemove name) -> removeFile $ T.unpack name 
+        Plugin (PluginRemove name) -> removeFile $ T.unpack name
+        Plugin (PluginSearch name) -> do
+            res <- searchPlugins name
+            case res of
+                Left err     -> errorLog (chunk err)
+                Right plugins -> mapM_ TIO.putStrLn (formatSearchResults plugins)
         Config (Generate name) -> do
           res <- generateConfig
           case res of
