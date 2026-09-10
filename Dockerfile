@@ -1,4 +1,4 @@
-FROM alpine:3.20 AS build
+FROM alpine:3.24 AS build
 
 WORKDIR /app
 
@@ -7,15 +7,24 @@ RUN apk add \
     cabal \
     musl-dev \
     gmp-dev \
+    gmp-static \
     zlib-dev \
     zlib-static \
     ncurses-dev \
     ncurses-static \
     build-base
 
+RUN cabal update
+
+COPY *.cabal cabal.project* /app/
+
+RUN cabal build --only-dependencies \
+    --disable-executable-dynamic \
+    --ghc-options="-optl-static -optl-pthread"
+
 COPY . /app
 
-RUN mkdir -p /app/out && cabal update
+RUN mkdir -p /app/out
 
 RUN cabal install \
     --installdir=/app/out \
@@ -23,7 +32,6 @@ RUN cabal install \
     --disable-executable-dynamic \
     --ghc-options="-optl-static -optl-pthread"
 
-FROM scratch
+FROM alpine:3.24
 COPY --from=build /app/out/mc-config /mc-config
 
-ENTRYPOINT ["/mc-config"]
