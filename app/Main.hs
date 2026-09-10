@@ -2,7 +2,7 @@
 
 module Main (main) where
 
-import Config (Config (tmuxSession), stdCfg, encodeConfig, decodeConfig)
+import Config (Config (tmuxSession), stdCfg, saveConfig, encodeConfig, decodeConfig, generateConfig)
 import Data.Char (toLower)
 import Install (downloadVersion, interactiveDownload)
 import Options.Applicative
@@ -30,24 +30,24 @@ data PluginCommand
   | PluginRemove Text
 
 data ConfigCommand 
-  = Generate (Maybe Text)
-  | Standard (Maybe Text)
+  = Generate Text
+  | Standard Text
 
 configCommandGenerate :: Parser ConfigCommand 
-configCommandGenerate = Generate <$> optional (argument str
+configCommandGenerate = Generate <$> argument str
   (  metavar "CONFIG"
   <> showDefault
   <> value "mconfig.dhall"
   <> help "generate config"
-  )) 
+  )
 
 configCommandStandard :: Parser ConfigCommand 
-configCommandStandard = Standard <$> optional (argument str
+configCommandStandard = Standard <$> argument str
   (  metavar "CONFIG"
   <> showDefault
   <> value "mconfig.dhall"
   <> help "standard config"
-  ))
+  )
 
 configCommand :: Parser ConfigCommand 
 configCommand = hsubparser 
@@ -153,8 +153,13 @@ main = do
                 Left err -> errorLog (chunk err)
                 Right msg -> successLog (chunk msg)
         Plugin (PluginRemove name) -> removeFile $ T.unpack name 
-        Config _                   -> unnecessaryLog "config command processed"
-
+        Config (Generate name) -> do
+          res <- generateConfig
+          case res of
+              Left err  -> errorLog (chunk err)
+              Right cfg -> saveConfig cfg name
+        Config (Standard name) -> saveConfig stdCfg name
+                
 runWithConfig :: Bool -> Text -> IO ()
 runWithConfig runnable configPath = do
     let pathStr = T.unpack configPath

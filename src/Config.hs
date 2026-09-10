@@ -2,7 +2,7 @@
 {-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE DeriveAnyClass    #-}
 
-module Config (Config (..), stdCfg, decodeConfig, encodeConfig, generateConfig) where
+module Config (Config (..), stdCfg, saveConfig, decodeConfig, encodeConfig, generateConfig) where
 
 import Dhall
 import Dhall.Core as DH
@@ -15,6 +15,8 @@ import Control.Exception (try, IOException)
 import Control.Monad (filterM)
 import Data.Maybe (fromMaybe)
 import Relude.Numeric (Word64)
+import qualified Data.Text.IO as TIO
+import Logger (unnecessaryLog, successLog)
 
 data Config = Config
     { options     :: [Text]
@@ -67,6 +69,15 @@ findJarInCurrentDir = do
   pure $ case existingJars of
     (firstJar:_) -> Just firstJar
     []           -> Nothing
+
+saveConfig :: Config -> Text -> IO ()
+saveConfig cfg configPath = do 
+  TIO.writeFile (T.unpack configPath) (encodeConfig cfg)
+  TIO.writeFile "eula.txt" "eula=true"
+  unnecessaryLog "created: eula.txt -> eula=true" 
+  successLog "created new config: "
+  TIO.putStrLn configPath
+  
 
 generateConfig :: IO (Either Text Config)
 generateConfig = do
