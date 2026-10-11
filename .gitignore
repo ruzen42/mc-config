@@ -5,4 +5,5 @@ src/*.hi
 src/*.o
 
 dist-newstyle
-result/
+result
+.stack-work/
